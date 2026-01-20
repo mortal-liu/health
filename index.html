@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN"> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>168 + 高强度训练 | 生物优化仪表盘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #F9FAFB; color: #374151; }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            height: 300px; 
+            margin: 0 auto;
+        }
+        /* Custom scrollbar for cleanliness */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        .active-tab { border-bottom: 2px solid #0D9488; color: #0D9488; font-weight: 600; }
+        .inactive-tab { color: #6B7280; }
+        .inactive-tab:hover { color: #374151; }
+    </style>
+    <!-- Chosen Palette: Teal & Warm Neutral. 
+         Background: #F9FAFB (Cool Gray 50)
+         Primary: #0D9488 (Teal 600) - Represents health, balance, and bio-optimization.
+         Secondary: #F59E0B (Amber 500) - Energy, warnings, metabolic fire.
+         Text: #374151 (Gray 700) - High readability.
+    -->
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Application Structure Plan:
+         1. Header: Quick summary of the user's protocol (168 + 1h Strength + 40min Cardio).
+         2. Dashboard Controls (The Command Center): Interactive inputs for weight and sleep. This personalizes all data below.
+         3. The Circadian Visualizer (Time): A visual bar chart showing the 24h cycle. The goal is to optimize WHEN to eat vs. train.
+         4. Metabolic Engine (Nutrition): Dynamic macro calculator specifically for high volume + fasting.
+         5. Recovery Analytics (Risk Management): Assessing the high training load. Radar chart for "System Readiness".
+         6. The "Yang Sheng" Knowledge Base: Accordion-style deep dives into cortisol, supplements, and sleep hygiene.
+         
+         Why this structure? 
+         The user is a "bio-hacker" type (20yo male, strict regimen). He needs data first, then actionable tools, then theory. 
+         The dashboard approach allows him to see the "Health of the System" at a glance.
+    -->
+
+    <!-- Header Section -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl text-teal-600">⚡</span>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900">Bio-Optimization Protocol</h1>
+                    <p class="text-xs text-gray-500">168 Fasting • Hypertrophy • Cardio Endurance</p>
+                </div>
+            </div>
+            <nav class="hidden md:flex space-x-6 text-sm">
+                <button onclick="scrollToSection('dashboard')" class="text-gray-600 hover:text-teal-600">仪表盘</button>
+                <button onclick="scrollToSection('nutrition')" class="text-gray-600 hover:text-teal-600">营养策略</button>
+                <button onclick="scrollToSection('recovery')" class="text-gray-600 hover:text-teal-600">深度恢复</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+
+        <!-- Intro Context -->
+        <section class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-teal-500">
+            <h2 class="text-lg font-bold text-gray-800 mb-2">👋 欢迎回来，年轻的战士</h2>
+            <p class="text-gray-600 leading-relaxed">
+                你正在执行一个非常激进且高效的方案：<strong>168轻断食 + 每日100分钟混合训练</strong>。对于20岁男性，这是重塑体型和提升心肺的黄金组合，但同时也伴随着<strong>皮质醇积累</strong>和<strong>肌肉流失</strong>的风险。本仪表盘旨在帮助你监控身体负荷，精准计算窗口期的营养摄入，将“养生”转化为科学的“生物优化”。
+            </p>
+        </section>
+
+        <!-- DASHBOARD CONTROLS -->
+        <section id="dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- User Inputs -->
+            <div class="bg-white p-6 rounded-xl shadow-sm card-hover col-span-1">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-gray-800">⚙️ 参数设定</h3>
+                    <span class="text-xs bg-teal-100 text-teal-800 px-2 py-1 rounded-full">实时计算</span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">当前体重 (kg)</label>
+                        <input type="number" id="weightInput" value="70" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500" oninput="updateDashboard()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">第一餐时间 (进食窗口开始)</label>
+                        <select id="startTime" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500" onchange="updateDashboard()">
+                            <option value="8">08:00 (早鸟模式)</option>
+                            <option value="10">10:00 (平衡模式)</option>
+                            <option value="12" selected>12:00 (经典模式)</option>
+                            <option value="14">14:00 (晚间训练)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">睡眠质量 (昨晚)</label>
+                        <input type="range" id="sleepQuality" min="1" max="10" value="7" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-600" oninput="updateRecovery()">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>糟糕</span>
+                            <span id="sleepValueDisplay">7/10</span>
+                            <span>完美</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics Visual -->
+            <div class="bg-white p-6 rounded-xl shadow-sm card-hover col-span-1 lg:col-span-2">
+                <h3 class="font-bold text-gray-800 mb-4">📊 24小时 昼夜节律与荷尔蒙模拟</h3>
+                <p class="text-sm text-gray-500 mb-4">此图表展示了在你当前的168计划下，皮质醇（压力/清醒）与胰岛素（进食/储存）的理想波动曲线。目标是让高强度训练避开深睡区，让进食窗口覆盖训练后的合成代谢期。</p>
+                <div class="chart-container">
+                    <canvas id="circadianChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- NUTRITION SECTION -->
+        <section id="nutrition" class="space-y-6">
+            <div class="flex items-center space-x-2 mb-2">
+                <span class="text-2xl">🥩</span>
+                <h2 class="text-2xl font-bold text-gray-800">精准营养策略 (The 8-Hour Fuel)</h2>
+            </div>
+            <p class="text-gray-600">由于你有每日1小时力量+40分钟有氧的巨大消耗，单纯的“少吃”会导致代谢损伤。你需要在一个压缩的8小时窗口内摄入足够的燃料。</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Macro Calculator -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-amber-500">
+                    <h3 class="font-bold text-lg text-gray-800 mb-4">每日宏量营养素目标</h3>
+                    <div class="flex justify-between items-end mb-6">
+                        <div>
+                            <span class="text-4xl font-bold text-gray-900" id="totalCalories">2650</span>
+                            <span class="text-sm text-gray-500">kcal / 日</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-600">基础代谢 + 运动消耗</div>
+                            <div class="text-xs text-amber-600 font-bold">盈余/赤字: 维持期</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Macro Bars -->
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium">蛋白质 (修复肌肉)</span>
+                                <span id="proteinTarget" class="text-teal-600 font-bold">160g</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-teal-600 h-2.5 rounded-full" style="width: 35%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">关键：每餐至少40g，确保亮氨酸阈值。</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium">碳水化合物 (糖原填充)</span>
+                                <span id="carbTarget" class="text-blue-600 font-bold">300g</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: 45%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">关键：主要集中在训练前后，其余时间吃低GI。</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium">脂肪 (激素合成)</span>
+                                <span id="fatTarget" class="text-amber-600 font-bold">70g</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-amber-500 h-2.5 rounded-full" style="width: 20%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">关键：远离训练时间摄入，以免减缓消化。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meal Timing Strategy -->
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h3 class="font-bold text-lg text-gray-800 mb-4">进食窗口可视化</h3>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="macroChart"></canvas>
+                    </div>
+                    <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                        <h4 class="font-bold text-blue-800 text-sm">💡 训练时机建议</h4>
+                        <p class="text-sm text-blue-700 mt-1" id="trainingTimingAdvice">
+                            正在计算最佳建议...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RECOVERY & RISK MANAGEMENT -->
+        <section id="recovery" class="space-y-6">
+            <div class="flex items-center space-x-2 mb-2">
+                <span class="text-2xl">❤️‍🩹</span>
+                <h2 class="text-2xl font-bold text-gray-800">系统恢复与风险控制 (System Recovery)</h2>
+            </div>
+            <p class="text-gray-600">高容量训练 (1h力量+40min有氧) 是一把双刃剑。如果没有足够的“阴”（恢复），过多的“阳”（训练）会导致皮质醇长期升高，不仅不掉秤，反而导致水肿和腹部脂肪堆积。</p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Readiness Radar -->
+                <div class="bg-white p-6 rounded-xl shadow-sm lg:col-span-1">
+                    <h3 class="font-bold text-gray-800 mb-2">今日身体就绪度</h3>
+                    <p class="text-xs text-gray-500 mb-4">基于你的睡眠和训练强度估算。</p>
+                    <div class="chart-container" style="height: 280px;">
+                        <canvas id="readinessChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <span id="readinessScore" class="text-2xl font-bold text-teal-600">85%</span>
+                        <p class="text-sm text-gray-600">状态评价: <span id="readinessText">良好</span></p>
+                    </div>
+                </div>
+
+                <!-- Checklist & Knowledge -->
+                <div class="bg-white p-6 rounded-xl shadow-sm lg:col-span-2 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-gray-800 mb-4">每日养生清单 (Checklist)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer" onclick="toggleCheck(this)">
+                                <div class="w-6 h-6 rounded border-2 border-gray-300 bg-white flex items-center justify-center text-white font-bold select-none check-box">✓</div>
+                                <div>
+                                    <p class="font-bold text-sm text-gray-800">早晨：光照与水</p>
+                                    <p class="text-xs text-gray-500">起床后500ml温水 + 5分钟阳光直射（调节昼夜节律）。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer" onclick="toggleCheck(this)">
+                                <div class="w-6 h-6 rounded border-2 border-gray-300 bg-white flex items-center justify-center text-white font-bold select-none check-box">✓</div>
+                                <div>
+                                    <p class="font-bold text-sm text-gray-800">训练后：皮质醇控制</p>
+                                    <p class="text-xs text-gray-500">有氧结束后，做5分钟“箱式呼吸”或拉伸，强制副交感神经启动。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer" onclick="toggleCheck(this)">
+                                <div class="w-6 h-6 rounded border-2 border-gray-300 bg-white flex items-center justify-center text-white font-bold select-none check-box">✓</div>
+                                <div>
+                                    <p class="font-bold text-sm text-gray-800">微量元素补充</p>
+                                    <p class="text-xs text-gray-500">锌镁(ZMA) + 复合B族。大量出汗会流失电解质。</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer" onclick="toggleCheck(this)">
+                                <div class="w-6 h-6 rounded border-2 border-gray-300 bg-white flex items-center justify-center text-white font-bold select-none check-box">✓</div>
+                                <div>
+                                    <p class="font-bold text-sm text-gray-800">睡前：电子宵禁</p>
+                                    <p class="text-xs text-gray-500">睡前1小时佩戴防蓝光眼镜或不看手机。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 border-t pt-4">
+                        <h4 class="font-bold text-sm text-red-500 mb-2">⚠️ 监控这些过劳信号</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-100">静息心率升高</span>
+                            <span class="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-100">持续关节痛</span>
+                            <span class="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-100">性欲下降</span>
+                            <span class="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-md border border-red-100">失眠/早醒</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visualization & Content Choices:
+             1. Circadian Chart (Line): Goal is to visualize abstract concepts (hormones) against concrete actions (eating/training). Shows overlap risks.
+             2. Macro Bars (Simple HTML/CSS): Direct, quantitative feedback on nutrition needs.
+             3. Meal Timing (Pie/Doughnut): Visualizes the "Window" concept intuitively.
+             4. Readiness Radar (Radar): Holistic view of health, moving away from just "weight" or "calories" to "lifestyle balance".
+             All using Chart.js as requested. No SVG.
+        -->
+
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-8 py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-500 text-sm">此工具仅供健康参考。若出现身体不适，请立即停止断食并咨询医生。</p>
+            <div class="mt-2 text-xs text-gray-400">Bio-Optimization Dashboard • v1.0</div>
+        </div>
+    </footer>
+
+    <!-- LOGIC -->
+    <script>
+        // State Management
+        const state = {
+            weight: 70,
+            startTime: 12, // 12:00
+            sleepQuality: 7,
+            activityFactor: 1.6 // High activity (1h strength + 40m cardio)
+        };
+
+        // Chart Instances
+        let circadianChartInstance = null;
+        let macroChartInstance = null;
+        let readinessChartInstance = null;
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            updateDashboard();
+        });
+
+        function toggleCheck(el) {
+            const checkbox = el.querySelector('.check-box');
+            if (checkbox.classList.contains('bg-teal-500')) {
+                checkbox.classList.remove('bg-teal-500', 'border-teal-500');
+                checkbox.classList.add('bg-white', 'border-gray-300');
+            } else {
+                checkbox.classList.remove('bg-white', 'border-gray-300');
+                checkbox.classList.add('bg-teal-500', 'border-teal-500');
+            }
+        }
+
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Data Processing & UI Updates
+        function updateDashboard() {
+            // Get inputs
+            state.weight = parseFloat(document.getElementById('weightInput').value) || 70;
+            state.startTime = parseInt(document.getElementById('startTime').value);
+            
+            // Calculate Calories & Macros
+            // BMR (Mifflin-St Jeor approx) = 10*W + 6.25*H(est 175) - 5*A(20) + 5
+            const bmr = (10 * state.weight) + (6.25 * 175) - (5 * 20) + 5;
+            const tdee = Math.round(bmr * state.activityFactor);
+            
+            // Goals: High Protein (2.2g/kg), Mod Fat (1g/kg), Rest Carbs
+            const protein = Math.round(state.weight * 2.2);
+            const fat = Math.round(state.weight * 1.0);
+            const carb = Math.round((tdee - (protein * 4) - (fat * 9)) / 4);
+
+            // Update DOM
+            document.getElementById('totalCalories').innerText = tdee;
+            document.getElementById('proteinTarget').innerText = `${protein}g`;
+            document.getElementById('fatTarget').innerText = `${fat}g`;
+            document.getElementById('carbTarget').innerText = `${carb}g`;
+
+            // Update Advice
+            const endTime = (state.startTime + 8) % 24;
+            const endTimeStr = endTime < 10 ? `0${endTime}:00` : `${endTime}:00`;
+            const startTimeStr = state.startTime < 10 ? `0${state.startTime}:00` : `${state.startTime}:00`;
+            
+            let advice = "";
+            if (state.startTime >= 12) {
+                advice = `你的进食窗口是 ${startTimeStr} - ${endTimeStr}。建议在 ${state.startTime - 2}:00 左右进行空腹训练（燃脂效率最高），训练后立即打破断食摄入高升糖碳水和蛋白。`;
+            } else {
+                advice = `你的进食窗口是 ${startTimeStr} - ${endTimeStr}。如果你在晚上训练，注意在窗口结束前摄入酪蛋白（如希腊酸奶）以防止夜间肌肉流失。`;
+            }
+            document.getElementById('trainingTimingAdvice').innerText = advice;
+
+            updateCharts();
+        }
+
+        function updateRecovery() {
+            state.sleepQuality = parseInt(document.getElementById('sleepQuality').value);
+            document.getElementById('sleepValueDisplay').innerText = `${state.sleepQuality}/10`;
+            updateReadinessChart();
+        }
+
+        // --- CHARTS ---
+
+        function initCharts() {
+            // 1. Circadian Chart
+            const ctx1 = document.getElementById('circadianChart').getContext('2d');
+            circadianChartInstance = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                    datasets: [
+                        {
+                            label: '理想皮质醇 (能量/压力)',
+                            data: [], // dynamic
+                            borderColor: '#F59E0B', // Amber
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: '理想胰岛素 (进食窗口)',
+                            data: [], // dynamic
+                            borderColor: '#0D9488', // Teal
+                            backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                            fill: true,
+                            tension: 0.1,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { display: false, min: 0, max: 100 },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 2. Meal Timing Chart (Donut)
+            const ctx2 = document.getElementById('macroChart').getContext('2d');
+            macroChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['禁食/燃脂期 (HGH升高)', '进食窗口 (胰岛素升高)'],
+                    datasets: [{
+                        data: [16, 8],
+                        backgroundColor: ['#E5E7EB', '#0D9488'], // Gray, Teal
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 3. Readiness Chart (Radar)
+            const ctx3 = document.getElementById('readinessChart').getContext('2d');
+            readinessChartInstance = new Chart(ctx3, {
+                type: 'radar',
+                data: {
+                    labels: ['睡眠质量', '营养摄入', '肌肉酸痛', '心境', '食欲'],
+                    datasets: [{
+                        label: '当前状态',
+                        data: [7, 8, 6, 7, 8],
+                        fill: true,
+                        backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                        borderColor: '#0D9488',
+                        pointBackgroundColor: '#0D9488',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#0D9488'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { display: true },
+                            suggestedMin: 0,
+                            suggestedMax: 10,
+                            ticks: { display: false } // Hide numbers for cleaner look
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function updateCharts() {
+            // Update Circadian Data
+            const cortisolData = [];
+            const insulinData = [];
+            
+            for (let i = 0; i < 24; i++) {
+                // Mock Cortisol Curve (Peak morning, drop night)
+                // Peak at 8am, low at midnight
+                let cortisol = Math.max(0, 100 - Math.abs(i - 8) * 6);
+                if (i < 5) cortisol = 20 + i * 5; // Rise before waking
+                
+                // Add workout spike (Assume workout 2 hours before first meal or at 17:00 if late eater)
+                let workoutTime = state.startTime - 2; 
+                if (workoutTime < 6) workoutTime = 17; // Default to evening if early eater logic fails visual
+                
+                if (i >= workoutTime && i < workoutTime + 2) {
+                     cortisol += 40; // Spike during workout
+                }
+                
+                // Mock Insulin Curve (Based on window)
+                const windowEnd = (state.startTime + 8);
+                let insulin = 10; // Baseline
+                if (i >= state.startTime && i < windowEnd) {
+                    insulin = 80; // High during eating
+                }
+                
+                cortisolData.push(Math.min(100, cortisol));
+                insulinData.push(insulin);
+            }
+
+            circadianChartInstance.data.datasets[0].data = cortisolData;
+            circadianChartInstance.data.datasets[1].data = insulinData;
+            circadianChartInstance.update();
+
+            // Update Readiness
+            updateReadinessChart();
+        }
+
+        function updateReadinessChart() {
+            // Simple logic: Impact of high activity vs sleep
+            const sleep = state.sleepQuality;
+            // High activity drains "Soreness" score if sleep is low
+            let sorenessScore = sleep > 7 ? 8 : (sleep > 5 ? 6 : 4);
+            let moodScore = sleep > 6 ? 8 : 5;
+            
+            // Appetite increases with activity but drops with overtraining
+            let appetiteScore = 8; 
+            
+            // Nutrition score assumed high (goal setting)
+            let nutritionScore = 9;
+
+            const newData = [sleep, nutritionScore, sorenessScore, moodScore, appetiteScore];
+            readinessChartInstance.data.datasets[0].data = newData;
+            readinessChartInstance.update();
+
+            // Calculate Score
+            const total = newData.reduce((a, b) => a + b, 0);
+            const max = 50;
+            const percentage = Math.round((total / max) * 100);
+            
+            const scoreEl = document.getElementById('readinessScore');
+            const textEl = document.getElementById('readinessText');
+            
+            scoreEl.innerText = `${percentage}%`;
+            
+            if (percentage > 85) {
+                scoreEl.className = "text-2xl font-bold text-teal-600";
+                textEl.innerText = "巅峰状态 - 可以挑战PR";
+            } else if (percentage > 65) {
+                scoreEl.className = "text-2xl font-bold text-amber-500";
+                textEl.innerText = "正常 - 保持训练强度";
+            } else {
+                scoreEl.className = "text-2xl font-bold text-red-500";
+                textEl.innerText = "疲劳 - 建议改为主动恢复";
+            }
+        }
+
+    </script>
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</body>
+</html>
